@@ -24,11 +24,7 @@ use axum::{
 use http::{request::Parts, Extensions, Method};
 use tower::{Layer, Service};
 
-#[cfg(feature = "ahash")]
-type RandomState = ahash::RandomState;
-
-#[cfg(not(feature = "ahash"))]
-type RandomState = std::collections::hash_map::RandomState;
+type RandomState = foldhash::fast::RandomState;
 
 #[cfg(feature = "real_ip")]
 pub mod real_ip;
@@ -721,6 +717,7 @@ where
     ///
     /// Returns a [`Stack`]-ed layer with the rate limiter layer and the error-handler layer combined
     /// that can be directly inserted into an [`axum::Router`].
+    #[allow(clippy::type_complexity)]
     #[must_use]
     pub fn default_handle_error(
         self,

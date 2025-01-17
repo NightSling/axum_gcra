@@ -6,6 +6,7 @@
 
 use std::{
     fmt::{self, Debug, Display},
+    future::Future,
     hash::Hash,
     net::{IpAddr, SocketAddr},
     ops::Deref,
@@ -123,35 +124,35 @@ impl IntoResponse for IpAddrRejection {
     }
 }
 
-#[async_trait::async_trait]
+use std::future::ready;
+
 impl<S> FromRequestParts<S> for RealIp {
     type Rejection = IpAddrRejection;
 
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    fn from_request_parts(parts: &mut Parts, _: &S) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         if let Some(ip) = parts.extensions.get::<RealIp>() {
-            return Ok(*ip);
+            return ready(Ok(*ip));
         }
 
-        match get_ip_from_parts(parts) {
+        ready(match get_ip_from_parts(parts) {
             Some(ip) => Ok(ip),
             None => Err(IpAddrRejection),
-        }
+        })
     }
 }
 
-#[async_trait::async_trait]
 impl<S> FromRequestParts<S> for RealIpPrivacyMask {
     type Rejection = IpAddrRejection;
 
-    async fn from_request_parts(parts: &mut Parts, _: &S) -> Result<Self, Self::Rejection> {
+    fn from_request_parts(parts: &mut Parts, _: &S) -> impl Future<Output = Result<Self, Self::Rejection>> + Send {
         if let Some(&ip) = parts.extensions.get::<RealIp>() {
-            return Ok(ip.into());
+            return ready(Ok(ip.into()));
         }
 
-        match get_ip_from_parts(parts) {
+        ready(match get_ip_from_parts(parts) {
             Some(ip) => Ok(ip.into()),
             None => Err(IpAddrRejection),
-        }
+        })
     }
 }
 
